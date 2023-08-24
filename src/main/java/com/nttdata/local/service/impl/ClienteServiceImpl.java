@@ -12,10 +12,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import com.nttdata.local.clienteDto.CatalogoDto;
+import com.nttdata.local.clienteDto.ClienteDto;
 import com.nttdata.local.clienteDto.ClienteResultDto;
 import com.nttdata.local.excepciones.ExcepClienteNoExiste;
 import com.nttdata.local.model.Catalogo;
-import com.nttdata.local.model.Cliente;
 import com.nttdata.local.repository.CatalogoRepositorio;
 import com.nttdata.local.repository.ClienteRepositorio;
 import com.nttdata.local.service.ClienteService;
@@ -39,19 +39,19 @@ public class ClienteServiceImpl implements ClienteService, ListarCatService {
 	@Transactional
 	public ClienteResultDto buscarCliente(String tipoDoc, Long numeroDoc) {
 
-		Optional<Cliente> cliente = clienteRepo.getCliente(numeroDoc, tipoDoc);
-		log.info("Cliente consultado: "+cliente.get());
-		Optional<Catalogo> catalogo = catalogoRepo.buscarCatalogo(tipoDoc);
-		
 		if (tipoDoc.isEmpty() || numeroDoc == null) {
 			log.info("Los parametros son obligatorios, tipoDoc, numeroDoc");
 			throw new ExcepClienteNoExiste("400", HttpStatus.BAD_REQUEST, "Los parametros son obligatorios");
 		}
 
-		if (!cliente.isPresent()) {
-			log.info("El cliente no existe en base de datos");
-			throw new ExcepClienteNoExiste("500", HttpStatus.INTERNAL_SERVER_ERROR, "El cliente no existe en base de datos");
-		}
+		Optional<ClienteDto> cliente = Optional.ofNullable(
+				clienteRepo.getCliente(numeroDoc, tipoDoc).map(entity -> this.modelMapper.map(entity, ClienteDto.class))
+						.orElseThrow(() -> new ExcepClienteNoExiste("500", HttpStatus.INTERNAL_SERVER_ERROR,
+								"El cliente no existe en base de datos")));
+
+		log.info("Cliente consultado: " + cliente.get());
+		Optional<Catalogo> catalogo = catalogoRepo.buscarCatalogo(tipoDoc);
+
 		ClienteResultDto response = new ClienteResultDto();
 		response.setNumeroDocumento(cliente.get().getNumeroDocumento());
 		response.setTipoDoc(catalogo.get().getNombre());
